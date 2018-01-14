@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A10A444B-9122-4024-8F49-8CAB4921776B}</ProjectGuid>
+    <RootNamespace>DetectRecog</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>D:\Lewis\projects\container_ocr\ctpn_vs2015_py36\windows\thirdparty\Boost;C:\cppLib\include;D:\Lewis\projects\container_ocr\ctpn_vs2015_py36\windows\thirdparty\OpenCV\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Lewis\projects\container_ocr\ctpn_vs2015_py36\windows\thirdparty\Boost\lib64-msvc-14.0;D:\Lewis\projects\container_ocr\ctpn_vs2015_py36\windows\thirdparty\OpenCV\x64\vc14\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>D:\Lewis\projects\container_ocr\ctpn_vs2015_py36\windows\thirdparty\Boost;C:\cppLib\include;D:\Lewis\projects\container_ocr\ctpn_vs2015_py36\windows\thirdparty\OpenCV\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Lewis\projects\container_ocr\ctpn_vs2015_py36\windows\thirdparty\Boost\lib64-msvc-14.0;D:\Lewis\projects\container_ocr\ctpn_vs2015_py36\windows\thirdparty\OpenCV\x64\vc14\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalOptions>/D _CRT_SECURE_NO_WARNINGS  /D _WINSOCK_DEPRECATED_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>opencv_world331d.lib;libboost_chrono-vc140-mt-gd-1_64.lib;libboost_date_time-vc140-mt-gd-1_64.lib;libboost_filesystem-vc140-mt-gd-1_64.lib;libboost_python3-vc140-mt-gd-1_64.lib;libboost_python-vc140-mt-gd-1_64.lib;libboost_regex-vc140-mt-1_64.lib;libboost_system-vc140-mt-gd-1_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>opencv_world331d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="getMSER.cpp" />
+    <ClCompile Include="recallratio.cpp" />
+    <ClCompile Include="socketcpp\tcpClient.cpp" />
+    <ClCompile Include="Source.cpp" />
+    <ClCompile Include="synth.cpp" />
+    <ClCompile Include="textDetection\FilterBox.cpp" />
+    <ClCompile Include="textDetection\Fmeasure.cpp" />
+    <ClCompile Include="textDetection\GetCandidate.cpp" />
+    <ClCompile Include="textDetection\GroundDetect.cpp" />
+    <ClCompile Include="textDetection\LinkCandidate.cpp" />
+    <ClCompile Include="textDetection\LinkCandidateUtil.cpp" />
+    <ClCompile Include="textDetection\mser.cpp" />
+    <ClCompile Include="textDetection\PolyGroundTruth.cpp" />
+    <ClCompile Include="textDetection\swt.cpp" />
+    <ClCompile Include="textDetection\swtUtil.cpp" />
+    <ClCompile Include="textDetection\TextDetection.cpp" />
+    <ClCompile Include="textDetection\Tools.cpp" />
+    <ClCompile Include="textDetection\VericaficationTextLine.cpp" />
+    <ClCompile Include="utils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="colors.h" />
+    <ClInclude Include="config.h" />
+    <ClInclude Include="getMSER.hpp" />
+    <ClInclude Include="recallratio.h" />
+    <ClInclude Include="socketcpp\tcpClient.h" />
+    <ClInclude Include="textDetection\Candidate.h" />
+    <ClInclude Include="textDetection\FilterBox.h" />
+    <ClInclude Include="textDetection\Fmeasure.h" />
+    <ClInclude Include="textDetection\GetCandidate.h" />
+    <ClInclude Include="textDetection\GroundDetect.h" />
+    <ClInclude Include="textDetection\headline.h" />
+    <ClInclude Include="textDetection\LinkCandidate.h" />
+    <ClInclude Include="textDetection\LinkCandidateUtil.h" />
+    <ClInclude Include="textDetection\mser.h" />
+    <ClInclude Include="textDetection\PolyGroundTruth.h" />
+    <ClInclude Include="textDetection\swt.h" />
+    <ClInclude Include="textDetection\swtUtil.h" />
+    <ClInclude Include="textDetection\TextDetection.h" />
+    <ClInclude Include="textDetection\Tools.h" />
+    <ClInclude Include="textDetection\VericaficationTextLine.h" />
+    <ClInclude Include="utils.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
