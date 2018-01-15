@@ -131,26 +131,28 @@ void detectRegion(string& imgpath, vector<east_bndbox>& east_boxes) {
 	removeOverlap(filter_boxes, slim_rects);
 
 	vector<vector<Rect>> clusters;
-	clusteringRects(slim_rects, clusters,50,20,15);
+	clusteringRects(slim_rects, clusters,100,20,15);
 
 	int clusterNum = clusters.size();
 
+	vector<int> attrs;
+	findClusterAttr(clusters, attrs);
 	int mid=-1,up=-1,down=-1;
 	for (int i = 0; i < clusterNum; i++) {
-		if (clusters[i].size() > 5) {
+		if (attrs[i]> 5) {
 			mid = i;
 			break;
 		}
 	}
 	if (mid > 0) {
 		Rect rect = clusters[mid - 1][0];
-		if (clusters[mid][0].y - (rect.y + rect.height) < 15) {
+		if (clusters[mid][0].y - (rect.y + rect.height) < 25  && abs(clusters[mid][0].x- rect.x)<100) {
 			up = mid - 1;
 		}
 	}
 	if (mid < clusterNum - 1) {
 		Rect rect = clusters[mid + 1][0];
-		if (rect.y - (clusters[mid][0].y + clusters[mid][0].height) < 15) {
+		if (rect.y - (clusters[mid][0].y + clusters[mid][0].height) < 25) {
 			down = mid + 1;
 		}
 	}
@@ -196,13 +198,17 @@ void detectRegion(string& imgpath, vector<east_bndbox>& east_boxes) {
 		cv::imwrite(path, img);
 		count++;
 	}
+	sort(midboxes.begin(), midboxes.end(), sortByX);
+	mergeVerifyNum(midboxes);
 	for (auto rect : midboxes) {
+		scaleSingleRect(rect, 0.2, 0.2, img_org.cols, img_org.rows);
 		Mat img = img_org(rect);
 		string path = imgsavepath + to_string(count) + ".jpg";
 		cv::imwrite(path, img);
 		count++;
 	}
 	for (auto rect : downboxes) {
+		scaleSingleRect(rect, 0.2, 0.2, img_org.cols, img_org.rows);
 		Mat img = img_org(rect);
 		string path = imgsavepath + to_string(count) + ".jpg";
 		cv::imwrite(path, img);
