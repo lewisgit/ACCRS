@@ -1,0 +1,4 @@
+Shapely
+Flask
+plumbum==1.6.2
+Pillow==4.2.1
