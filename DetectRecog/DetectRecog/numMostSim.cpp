@@ -40,62 +40,42 @@ bool conNuMostSimMatch(const string &iStr, string &oStr)
 	bool isOk = readMatchData(&matchData);
 	if (!isOk)
 	{
-		exit(-1);
+		oStr = iStr;
+		return false;
+		//exit(-1);
 	}
 
 
-	/*以下两个for循环将4个字符全部匹配和只有第3位不匹配这两种情况单独拿出来处理*/
+	int maxResultLength = 0;
+	string maxResult = "";
 	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
 	{
 		string temp = *dataIterator;
-		/*匹配输入字符串iStr和数据库中的字符串temp*/
 		string matchResult;
 		lcss(temp, iStr, matchResult);
-		if (matchResult.length() == 4)
+		int resultLength = matchResult.length();
+		if (resultLength == 4)
 		{
 			oStr = temp;
 			return true;
 		}
-	}
-
-	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
-	{
-		string temp = *dataIterator;
-		/*匹配输入字符串iStr和数据库中的字符串temp*/
-		string matchResult;
-		lcss(temp, iStr, matchResult);
-		if (matchResult.length() == 3)
+		else
 		{
-			oStr = temp;
-			return true;
+			if (resultLength > maxResultLength)
+			{
+				maxResultLength = resultLength;
+				maxResult = temp;
+			}
 		}
 	}
-
-	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
+	oStr = maxResult;
+	if (maxResultLength > 2)
+	{ 
+		return true;
+	}
+	else
 	{
-		string temp = *dataIterator;
-		/*匹配输入字符串iStr和数据库中的字符串temp*/
-		string matchResult;
-		lcss(temp, iStr, matchResult);
-		if (matchResult.length() == 2)
-		{
-			oStr = temp;
-			return false;
-		}
+		return false;
 	}
 
-	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
-	{
-		string temp = *dataIterator;
-		/*匹配输入字符串iStr和数据库中的字符串temp*/
-		string matchResult;
-		lcss(temp, iStr, matchResult);
-		if (matchResult.length() == 1)
-		{
-			oStr = temp;
-			return false;
-		}
-	}
-	oStr = "";
-	return false;
 }

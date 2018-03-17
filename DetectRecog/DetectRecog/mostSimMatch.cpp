@@ -106,86 +106,64 @@ bool mostSimMatch(const string &iStr, string &oStr)
 	}
 
 	/*以下两个for循环将4个字符全部匹配和只有第3位不匹配这两种情况单独拿出来处理*/
+	int maxResultLength = 0;
+	string maxResult = "";
 	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
 	{
 		string temp = *dataIterator;
 		/*匹配输入字符串iStr和数据库中的字符串temp*/
 		string matchResult;
 		lcss(temp, iStr, matchResult);
-		if (matchResult.length() == 4)
+		int resultLength = matchResult.length();
+		if (resultLength == 4)
 		{
 			oStr = temp;
 			return true;
 		}
-	}
-
-	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
-	{
-		string temp = *dataIterator;
-		std::regex reg(temp.replace(2, 1, "."));
-		std::smatch matchResult;
-		if (std::regex_search((string::const_iterator)iStr.begin(), (string::const_iterator)iStr.end(), matchResult, reg))
+		else
 		{
-			char thridChar = matchResult.str().at(2);
-			if (thridChar == '6')
+			if (resultLength > maxResultLength)
 			{
-				oStr = matchResult.str().replace(2, 1, "g");
+				maxResultLength = resultLength;
+				maxResult = temp;
 			}
-			else
+		}
+	}
+
+	if (maxResultLength == 3)
+	{
+		for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
+		{
+			string temp = *dataIterator;
+			std::regex reg(temp.replace(2, 1, "."));
+			std::smatch matchResult;
+			if (std::regex_search((string::const_iterator)iStr.begin(), (string::const_iterator)iStr.end(), matchResult, reg))
 			{
-				oStr = matchResult.str().replace(2, 1, "u");
+				char thridChar = matchResult.str().at(2);
+				if (thridChar == '6')
+				{
+					oStr = matchResult.str().replace(2, 1, "g");
+				}
+				else
+				{
+					oStr = matchResult.str().replace(2, 1, "u");
+				}
+				return true;
 			}
+		}
+		oStr = maxResult;
+		return false;
+	}
+	if (maxResultLength == 2)
+	{
+		bool isRecog = specialCase(iStr, oStr, specialCaseIndex, specialCaseData);
+		if (isRecog)
+		{
 			return true;
 		}
 	}
-
-	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
-	{
-		string temp = *dataIterator;
-		/*匹配输入字符串iStr和数据库中的字符串temp*/
-		string matchResult;
-		lcss(temp, iStr, matchResult);
-		if (matchResult.length() == 3)
-		{
-			oStr = temp;
-			return true;
-		}
-	}
-
-
-
-	bool isRecog = specialCase(iStr, oStr, specialCaseIndex, specialCaseData);
-	if (isRecog)
-	{
-		return true;
-	}
-
-	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
-	{
-		string temp = *dataIterator;
-		/*匹配输入字符串iStr和数据库中的字符串temp*/
-		string matchResult;
-		lcss(temp, iStr, matchResult);
-		if (matchResult.length() == 2)
-		{
-			oStr = temp;
-			return false;
-		}
-	}
-
-	for (auto dataIterator = matchData.begin(); dataIterator != matchData.end(); ++dataIterator)
-	{
-		string temp = *dataIterator;
-		/*匹配输入字符串iStr和数据库中的字符串temp*/
-		string matchResult;
-		lcss(temp, iStr, matchResult);
-		if (matchResult.length() == 1)
-		{
-			oStr = temp;
-			return false;
-		}
-	}
-	oStr = "";
+	
+	oStr = maxResult;
 	return false;
 }
 

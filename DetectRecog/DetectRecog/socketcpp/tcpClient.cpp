@@ -7,27 +7,28 @@
 using namespace rapidjson;
 //using std::string;
 WSADATA wsa;
-SOCKET client_ctpn;
-SOCKET client_east;
-SOCKET client_crnn;
-SOCKET client_deeplab;
-SOCKET client_alex;
+//SOCKET client_ctpn;
+//SOCKET client_east;
+//SOCKET client_crnn;
+//SOCKET client_deeplab;
+//SOCKET client_alex;
 static const char* kTypeNames[] =
 { "Null", "False", "True", "Object", "Array", "String", "Number" };
 
 int  initSocket() {
 	if (WSAStartup(MAKEWORD(1, 1), &wsa) != 0)
 		return -1;
-	client_alex = socket(AF_INET, SOCK_STREAM, 0);
-	client_ctpn = socket(AF_INET, SOCK_STREAM, 0);
-	client_east = socket(AF_INET, SOCK_STREAM, 0);
-	client_crnn = socket(AF_INET, SOCK_STREAM, 0);
-	client_deeplab = socket(AF_INET, SOCK_STREAM, 0);
+	
 	return 0;
 }
 
 int east_request(string imgpath, std::vector<east_bndbox>& boxes) {
 	SOCKADDR_IN addrServer;
+	//SOCKET client_alex = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_ctpn = socket(AF_INET, SOCK_STREAM, 0);
+	SOCKET client_east = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_crnn = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_deeplab = socket(AF_INET, SOCK_STREAM, 0);
 	addrServer.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 	addrServer.sin_family = AF_INET;
 	addrServer.sin_port = htons(6001);
@@ -47,12 +48,12 @@ int east_request(string imgpath, std::vector<east_bndbox>& boxes) {
 	
 	static const char* kTypeNames[] =
 	{ "Null", "False", "True", "Object", "Array", "String", "Number" };
-	for (Value::ConstMemberIterator itr = json.MemberBegin();
+	/*for (Value::ConstMemberIterator itr = json.MemberBegin();
 		itr != json.MemberEnd(); ++itr)
 	{
 		printf("Type of member %s is %s\n",
 			itr->name.GetString(), kTypeNames[itr->value.GetType()]);
-	}
+	}*/
 	
 	for (int j = 0; j < json["boxnum"].GetInt(); j++) {
 		//char *charind = itoa(j,);
@@ -83,7 +84,7 @@ int east_request(string imgpath, std::vector<east_bndbox>& boxes) {
 	//printf("%d\n", json["2"].GetInt());
 	//printf("%d\n", json["3"].GetInt());
 	//printf("%d\n", json["4"].GetInt());
-	//closesocket(client);
+	closesocket(client_east);
 	//WSACleanup();
 	return 0;
 }
@@ -92,6 +93,11 @@ int east_request(string imgpath, std::vector<east_bndbox>& boxes) {
 
 int ctpn_request(string imgpath,std::vector<cv::Rect>& rects, bool isRotate) {
 	SOCKADDR_IN addrServer;
+	//SOCKET client_alex = socket(AF_INET, SOCK_STREAM, 0);
+	SOCKET client_ctpn = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_east = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_crnn = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_deeplab = socket(AF_INET, SOCK_STREAM, 0);
 	addrServer.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 	addrServer.sin_family = AF_INET;
 	addrServer.sin_port = htons(6002);
@@ -110,13 +116,13 @@ int ctpn_request(string imgpath,std::vector<cv::Rect>& rects, bool isRotate) {
 	printf("\n%s\n", recvBuf);
 
 	
-	for (Value::ConstMemberIterator itr = json.MemberBegin();
-		itr != json.MemberEnd(); ++itr)
-	{
-		printf("Type of member %s is %s\n",
-			itr->name.GetString(), kTypeNames[itr->value.GetType()]);
-	}
-	
+	//for (Value::ConstMemberIterator itr = json.MemberBegin();
+	//	itr != json.MemberEnd(); ++itr)
+	//{
+	//	printf("Type of member %s is %s\n",
+	//		itr->name.GetString(), kTypeNames[itr->value.GetType()]);
+	//}
+	//
 	if (isRotate) {
 		for (int j = 0; j < json["boxnum"].GetInt(); j++) {
 			//char *charind = itoa(j,);
@@ -160,7 +166,7 @@ int ctpn_request(string imgpath,std::vector<cv::Rect>& rects, bool isRotate) {
 	//printf("%d\n", json["2"].GetInt());
 	//printf("%d\n", json["3"].GetInt());
 	//printf("%d\n", json["4"].GetInt());
-	//closesocket(client);
+	closesocket(client_ctpn);
 	//WSACleanup();
 	return 0;
 }
@@ -168,6 +174,11 @@ int ctpn_request(string imgpath,std::vector<cv::Rect>& rects, bool isRotate) {
 
 int crnn_request(string imgpath, std::vector<string>& strs) {
 	SOCKADDR_IN addrServer;
+	//SOCKET client_alex = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_ctpn = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_east = socket(AF_INET, SOCK_STREAM, 0);
+	SOCKET client_crnn = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_deeplab = socket(AF_INET, SOCK_STREAM, 0);
 	addrServer.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 	addrServer.sin_family = AF_INET;
 	addrServer.sin_port = htons(6003);
@@ -187,18 +198,18 @@ int crnn_request(string imgpath, std::vector<string>& strs) {
 
 	static const char* kTypeNames[] =
 	{ "Null", "False", "True", "Object", "Array", "String", "Number" };
-	for (Value::ConstMemberIterator itr = json.MemberBegin();
+	/*for (Value::ConstMemberIterator itr = json.MemberBegin();
 		itr != json.MemberEnd(); ++itr)
 	{
 		printf("Type of member %s is %s\n",
 			itr->name.GetString(), kTypeNames[itr->value.GetType()]);
-	}
+	}*/
 
 	for (int j = 0; j < json["strnum"].GetInt(); j++) {
 		//char *charind = itoa(j,);
 		string charind = std::to_string(j);
 		const Value& array1 = json[charind.c_str()];
-		std::cout << array1.GetString() << std::endl;
+		//std::cout << array1.GetString() << std::endl;
 		strs.push_back(array1.GetString());
 
 		printf("\n");
@@ -207,13 +218,18 @@ int crnn_request(string imgpath, std::vector<string>& strs) {
 	//printf("%d\n", json["2"].GetInt());
 	//printf("%d\n", json["3"].GetInt());
 	//printf("%d\n", json["4"].GetInt());
-	//closesocket(client);
+	closesocket(client_crnn);
 	//WSACleanup();
 	return 0;
 }
 
 int deeplab_request(string imgpath, cv::Rect& rect) {
 	SOCKADDR_IN addrServer;
+	//SOCKET client_alex = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_ctpn = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_east = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_crnn = socket(AF_INET, SOCK_STREAM, 0);
+	SOCKET client_deeplab = socket(AF_INET, SOCK_STREAM, 0);
 	addrServer.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 	addrServer.sin_family = AF_INET;
 	addrServer.sin_port = htons(6004);
@@ -233,12 +249,12 @@ int deeplab_request(string imgpath, cv::Rect& rect) {
 
 	static const char* kTypeNames[] =
 	{ "Null", "False", "True", "Object", "Array", "String", "Number" };
-	for (Value::ConstMemberIterator itr = json.MemberBegin();
+	/*for (Value::ConstMemberIterator itr = json.MemberBegin();
 		itr != json.MemberEnd(); ++itr)
 	{
 		printf("Type of member %s is %s\n",
 			itr->name.GetString(), kTypeNames[itr->value.GetType()]);
-	}
+	}*/
 
 
 	int x0 = json["x0"].GetInt();
@@ -260,13 +276,18 @@ int deeplab_request(string imgpath, cv::Rect& rect) {
 	//printf("%d\n", json["2"].GetInt());
 	//printf("%d\n", json["3"].GetInt());
 	//printf("%d\n", json["4"].GetInt());
-	//closesocket(client);
+	closesocket(client_deeplab);
 	//WSACleanup();
 	return 0;
 }
 
 int alex_request(string imgpath, string& recog_result) {
 	SOCKADDR_IN addrServer;
+	SOCKET client_alex = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_ctpn = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_east = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_crnn = socket(AF_INET, SOCK_STREAM, 0);
+	//SOCKET client_deeplab = socket(AF_INET, SOCK_STREAM, 0);
 	addrServer.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 	addrServer.sin_family = AF_INET;
 	addrServer.sin_port = htons(6005);
@@ -286,12 +307,12 @@ int alex_request(string imgpath, string& recog_result) {
 
 	static const char* kTypeNames[] =
 	{ "Null", "False", "True", "Object", "Array", "String", "Number" };
-	for (Value::ConstMemberIterator itr = json.MemberBegin();
+	/*for (Value::ConstMemberIterator itr = json.MemberBegin();
 		itr != json.MemberEnd(); ++itr)
 	{
 		printf("Type of member %s is %s\n",
 			itr->name.GetString(), kTypeNames[itr->value.GetType()]);
-	}
+	}*/
 
 
 	recog_result = json["result"].GetString();
@@ -313,7 +334,7 @@ int alex_request(string imgpath, string& recog_result) {
 	//printf("%d\n", json["2"].GetInt());
 	//printf("%d\n", json["3"].GetInt());
 	//printf("%d\n", json["4"].GetInt());
-	//closesocket(client);
+	closesocket(client_alex);
 	//WSACleanup();
 	return 0;
 }

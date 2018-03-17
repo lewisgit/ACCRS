@@ -429,12 +429,17 @@ string detectRegion(string& imgpath, vector<east_bndbox>& east_boxes, Rect deepl
 		if (up == -1 && i==0) {
 			char firstchar = strs[count].c_str()[0];
 			string restchars = strs[count].c_str() + 1;
-			string newstr;
-			if (firstchar == 'i')
+			//string newstr;
+			
+			string checkdatabase;
+			conNuMostSimMatch(strs[count], checkdatabase);
+			output_str = output_str + checkdatabase + " ";
+
+			/*if (firstchar == 'i')
 				newstr = "t" + restchars;
 			else
-				newstr = strs[count];
-			cv::putText(showimg4, newstr, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
+				newstr = strs[count];*/
+			cv::putText(showimg4, checkdatabase, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
 
 		}
 		else if (midboxes[i].width<midboxes[i].height) {
@@ -449,6 +454,7 @@ string detectRegion(string& imgpath, vector<east_bndbox>& east_boxes, Rect deepl
 			else if (lastdigit[0] == 'd' || lastdigit[0] == 'q')
 				lastdigit = '1';
 
+			output_str = output_str +  lastdigit;
 			cv::putText(showimg4, lastdigit, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
 		}
 		
@@ -461,17 +467,19 @@ string detectRegion(string& imgpath, vector<east_bndbox>& east_boxes, Rect deepl
 				lastdigit = '0';
 			cv::putText(showimg4, lastdigit, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
 		}*/
-		else 
+		else {
 			cv::putText(showimg4, strs[count], cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
-
-		if (i == 0 && up == -1) {
+			output_str = output_str + strs[count];
+		}
+		/*if (i == 0 && up == -1) {
 			string chechdatabase;
 			conNuMostSimMatch(strs[count], chechdatabase);
 			output_str = output_str + chechdatabase + " ";
 		}
 		else {
 			output_str += strs[count];
-		}
+		}*/
+
 		count++;
 	}
 	for (auto rect : downboxes) {
@@ -498,6 +506,7 @@ string detectRegion(string& imgpath, vector<east_bndbox>& east_boxes, Rect deepl
 		count++;
 	}
 
+	//cout << output_str << endl;
 #if 0
 	cv::imshow(imgpath, showimg4);
 	cv::waitKey(0);
@@ -531,6 +540,25 @@ bool detect(char* output1,char* output2,const char* input1,const char* input2, i
 	string img1 = input1;
 	string img2 = input2;
 
+	int flag = 0;
+	ifstream fin1(img1);
+	ifstream fin2(img2);
+
+	if (!fin1) {
+		cout << "file 1 does not exist." << endl;
+		*output1 = '\0';
+		*output2 = '\0';
+		flag = 1;
+	}
+	if (!fin2) {
+		cout << "file 2 does not exist." << endl;
+		*output1 = '\0';
+		*output2 = '\0';
+		flag = 1;
+	}
+	if (flag == 1)
+		return false;
+
 	clock_t start, end;
 	start = clock();
 
@@ -543,7 +571,9 @@ bool detect(char* output1,char* output2,const char* input1,const char* input2, i
 	deeplab_request(img1, deeplabBox_1);
 	east_request(img1, east_boxes_1);
 
-	initSocket();
+	
+
+	//initSocket();
 	east_request(img2, east_boxes_2);
 	deeplab_request(img2, deeplabBox_2);
 
@@ -552,6 +582,22 @@ bool detect(char* output1,char* output2,const char* input1,const char* input2, i
 	Mat grayimg1, grayimg2;
 	cv::cvtColor(orgimg1, grayimg1, CV_BGR2GRAY);
 	cv::cvtColor(orgimg2, grayimg2, CV_BGR2GRAY);
+
+
+
+	Mat img1_deeplab = orgimg1(deeplabBox_1);
+	Mat img2_deeplab = orgimg2(deeplabBox_2);
+
+	char *img1_cstr = new char[img1.size() + 10];
+	char *img2_cstr = new char[img2.size() + 10];
+	strcpy(img1_cstr, img1.c_str());
+	strcpy(img2_cstr, img2.c_str());
+	string img1_dup = img1_cstr;
+	string img2_dup = img2_cstr;
+	img1_dup.replace(img1_dup.find(".jpg"), 4, "_dl.jpg");
+	img2_dup.replace(img2_dup.find(".jpg"), 4, "_dl.jpg");
+	cv::imwrite(img1_dup, img1_deeplab);
+	cv::imwrite(img2_dup, img2_deeplab);
 
 	mser_boxes_1 = getMSER(grayimg1, mserThres, mserMinArea, mserMaxArea);
 	mser_boxes_2 = getMSER(grayimg2, mserThres, mserMinArea, mserMaxArea);
@@ -598,8 +644,8 @@ bool detect(char* output1,char* output2,const char* input1,const char* input2, i
 
 	}
 	//int ttmp;
-	cout << output_str_1 << endl;
-	cout << output_str_2 << endl;
+	//cout << output_str_1 << endl;
+	//cout << output_str_2 << endl;
 
 	strcpy(output1, output_str_1.c_str());
 	strcpy(output2, output_str_2.c_str());
@@ -611,6 +657,37 @@ bool detect(char* output1,char* output2,const char* input1,const char* input2, i
 	return true;
 }
 #endif 
+
+#if 0
+//using namespace std;
+string img1 = "D:\\ContainerIMG\\2xianghao\\0008\\126_0008_170504_101408_Front_03.jpg";
+string img2 = "D:\\ContainerIMG\\2xianghao\\0001\\126_0001_170504_091158_Rear_03.jpg";
+
+char* output1 = new char[100];
+char* output2 = new char[100];
+
+int main() {
+
+	string testPath1= "D:/TESTimg/back";
+	vector<string> files1;
+	getAllFiles(testPath1, files1);
+	string testPath2 = "D:/TESTimg/front";
+	vector<string> files2;
+	getAllFiles(testPath2, files2);
+
+	for (int i = 0;i < 121;i++) {
+
+		detect(output1, output2, files1[i].c_str(), files2[i].c_str(), 0);
+
+		cout << output1 << endl;
+		cout << output2 << endl;
+	}
+	int tmp;
+	scanf_s("%d", &tmp);
+	return 0;
+}
+#endif
+
 
 #if 0
 int main(int argc, char** argv) {
