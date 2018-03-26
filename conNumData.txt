@@ -3,6 +3,8 @@ hjcu
 oolu
 tcnu
 tclu
+trlu
+tcku
 oocu
 bmou
 tgbu
@@ -16,7 +18,13 @@ magu
 segu
 caiu
 temu
-tcku
 ymmu
 gvcu
 cxdu
+rfcu
+mscu
+ttnu
+cclu
+dryu
+tgcu
+

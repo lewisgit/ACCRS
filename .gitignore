@@ -1,5 +1,6 @@
 *.caffemodel
 *.pth
+*.whl
 east_icdar2015_resnet_v1_50_rbox/
 densecrf/
 

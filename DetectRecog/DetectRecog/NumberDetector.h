@@ -5,19 +5,27 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include "MyTypes.h"
+#include "colors.h"
 //#include "colors.h"
 using std::string;
 using cv::Mat;
 using cv::Rect;
 using std::vector;
 
+extern bool mostSimMatch(const string &iStr, string &oStr);
+extern bool conNuMostSimMatch(const string &iStr, string &oStr);
+
 class NumberDetector {
 public:
 	NumberDetector(string& imgpath,vector<Rect>& ctpn_boxes, vector<east_bndbox>& east_boxes, vector<Rect>& mser_boxes,Rect deeplab_box);
-	string detectVerticalNumber(long start, string savepath);
-	void detectHorizontalNumber(long start, vector<vector<Rect>>& dst_rects, string savepath);
+	string detectVerticalNumber(string savepath);
+	void detectHorizontalNumber(vector<vector<Rect>>& dst_rects, string savepath);
+	string detectRowNumber_front(string savepath);
+
 	int judgeSide();
+	int judgeMode_east();
 private:
+	string _imgpath;
 	Mat _org_img;
 	vector<Rect> _ctpn_boxes;
 	vector<east_bndbox> _east_boxes;
@@ -35,5 +43,12 @@ private:
 	void simpleClusterByHorizon(vector<Rect>& src,vector<vector<Rect>>& clusters, int thres);
 
 	void adjustEastByMser(vector<Rect> rects);
-	int findVerifyNumber(Rect& rect, Rect& verifyRect, int midthres,int heightThres);
+	int findVerifyNumber(Rect& rect, Rect& verifyRect, int midthres, int heightThres);
+
+	void locateNumber(vector<east_bndbox>& east_boxes, vector<Rect> cluster, vector<Rect>& boxes);
+	void filterByEast(vector<Rect>& mser_boxes, vector<east_bndbox>& east_boxes, vector<Rect>& filtered_boxes, float filterHeightThres, float filterYThres, float filterDistThres);
+
+	void eastBoderRefine(vector<Rect>& boxes, vector<Rect>& filtered_mser);
+
+	void filterEastByPosition(vector<Rect>& src, vector<Rect>& dst);
 };

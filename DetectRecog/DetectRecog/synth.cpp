@@ -2,6 +2,8 @@
 
 #define DLL_GEN
 
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/operations.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -10,7 +12,7 @@
 #include <string>
 
 #include "socketcpp/tcpClient.h"
-#include "colors.h"
+
 #include <time.h>
 //#include "textDetection/TextDetection.h"
 #include <fstream>
@@ -19,6 +21,9 @@
 #include "utils.h"
 #include "mser_filter.h"
 #include "detect.h"
+#include "config.h"
+
+//#include <windows.h>
 extern bool mostSimMatch(const string &iStr, string &oStr);
 extern bool conNuMostSimMatch(const string &iStr, string &oStr);
 using std::to_string;
@@ -26,60 +31,12 @@ using cv::Mat;
 using std::cout;
 using std::endl;
 using std::vector;
-//EAST_Detector* east_detector;
+
 string east_trained;
 string east_pyfile;
 
 string east_path;
-/*
-void init() {
-	string charname = "D:/Lewis/projects/container_ocr/ctpn_vs2015_py36/windows/../Build/x64/Release/classification.exe";
-	//std::wstring wcharname(charname.begin(),charname.end());
-	wchar_t** args = new wchar_t*;
-	wchar_t* proName = new wchar_t[charname.size()+1];
-	for (int i = 0; i < charname.size() + 1; i++) {
-		proName[i] = charname[i];
-	}
-	args[0] = proName;
-	Py_SetProgramName(proName);
-	Py_Initialize();
-	//wchar_t** wStr = new wchar_t*;
-	//wStr[0] = new wchar_t[10];
-	//wStr[0][0] = 'c';
-	PySys_SetArgv(1, args);
-	//Py_SetProgramName(wStr);
-	//PyRun_SimpleString("import sys");
-	//string seteastpath = "sys.path.append('" + east_path + "')";
-	//PyRun_SimpleString(seteastpath.c_str());
-	east_detector = new EAST_Detector(east_trained,east_pyfile);
-}
-*/
-/*
-void detect_back(string imgpath) {
-	vector<bndbox> east_boxes;
-	east_detector->detect(imgpath, east_boxes);
-	for (auto box : east_boxes) {
-		cout << box.x0 << endl;
-	}
-}
-*/
 
-//void testMSERnSWT(string imgpath) {
-//	vector<string> gtset;
-//	string line;
-//	cv::Mat image = cv::imread(imgpath);
-//	ifstream fin("D:\\Lewis\\projects\\container_ocr\\ctpn_vs2015_py36\\windows\\classification\\textDetection\\resource\\gt_demo");
-//	while (getline(fin, line)) {
-//		gtset.push_back(line);
-//	}
-//	TextDetection td;
-//	cout << td.detectText(image, gtset) << endl;
-//	cv::waitKey(0);
-//}
-
-//NumberDetector* detector;
-
-#include "config.h"
 
 void DeeplabEastMserFilter(vector<Rect>& boxes, vector<east_bndbox>& east_boxes,Rect deeplab_box, vector<Rect>& filter_boxes, float heightThres, float yThres) {
 	for (auto box : boxes) {
@@ -113,10 +70,10 @@ void locateNumber(vector<east_bndbox>& east_boxes, vector<Rect> cluster, vector<
 	int eastnum = east_boxes.size();
 	for (int i = 0; i < eastnum; i++) {
 		east_bndbox box = east_boxes[i];
-		int x0 = std::min(box.x0, box.x3);
-		int x1 = std::max(box.x1, box.x2);
-		int y0 = std::min(box.y0, box.y1);
-		int y1 = std::max(box.y2, box.y3);
+		int x0 = min(box.x0, box.x3);
+		int x1 = max(box.x1, box.x2);
+		int y0 = min(box.y0, box.y1);
+		int y1 = max(box.y2, box.y3);
 		if (x0 < 0)
 			x0 = 0;
 		if (y0 < 0)
@@ -124,8 +81,8 @@ void locateNumber(vector<east_bndbox>& east_boxes, vector<Rect> cluster, vector<
 		Rect rect0(x0, y0, x1 - x0, y1 - y0);
 		for (auto rect1 : cluster) {
 			if (isOverlap(rect0, rect1)) {
-				int width = std::min(rect0.x + rect0.width, rect1.x + rect1.width) - std::max(rect0.x, rect1.x);
-				int height= std::min(rect0.y + rect0.height, rect1.y + rect1.height) - std::max(rect0.y, rect1.y);
+				int width = min(rect0.x + rect0.width, rect1.x + rect1.width) - max(rect0.x, rect1.x);
+				int height= min(rect0.y + rect0.height, rect1.y + rect1.height) - max(rect0.y, rect1.y);
 				if (width > 0 && height > 0) {
 					int area = rect1.width*rect1.height;
 					if (width*height*1.0 / area > 0.9) {
@@ -156,7 +113,7 @@ string detectRegion(string& imgpath, vector<east_bndbox>& east_boxes, Rect deepl
 
 
 	vector<Rect> filter_boxes;
-	DeeplabEastMserFilter(mser_boxes, east_boxes, deeplab_box, filter_boxes, filterHeightThres, filterYThres);
+	DeeplabEastMserFilter(mser_boxes, east_boxes, deeplab_box, filter_boxes, eastFilterHeightThres, eastFilterYThres);
 
 	vector<Rect> slim_rects;
 	removeOverlap(filter_boxes, slim_rects);
@@ -326,7 +283,7 @@ string detectRegion(string& imgpath, vector<east_bndbox>& east_boxes, Rect deepl
 	}
 	else {
 		vector<vector<Rect>> dst_rects;
-		detector->detectHorizontalNumber(start, dst_rects,"");
+		detector->detectHorizontalNumber(dst_rects,"");
 		upboxes = dst_rects[0];
 		midboxes = dst_rects[1];
 		downboxes = dst_rects[2];
@@ -528,14 +485,192 @@ string detectRegion(string& imgpath, vector<east_bndbox>& east_boxes, Rect deepl
 }
 
 
+bool  CheckFolderExist(const string &strPath)
+{
+	WIN32_FIND_DATA  wfd;
+	bool rValue = false;
+	HANDLE hFind = FindFirstFile(strPath.c_str(), &wfd);
+	if ((hFind != INVALID_HANDLE_VALUE) && (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+	{
+		rValue = true;
+	}
+	FindClose(hFind);
+	return rValue;
+}
 
 
 
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
+
+bool detectSide(char *output, const char *input, int mode)
+{
+	string emptystr = "";
+	strcpy(output, emptystr.c_str());
+	string filePath(input);
+	string tmpSaveDir("D:/SideSaveImg/");
+
+	if (!CheckFolderExist(tmpSaveDir)) {
+		CreateDirectory(tmpSaveDir.c_str(), NULL);
+	}
+
+	Rect deeplabBbox;			// deeplab的结果
+	vector<string> rowOutput;	// 箱号是横着的的结果
+	string colOutput;			// 箱号是竖着的结果
+	Mat srcImg = cv::imread(filePath);
+
+	vector<string> files;
+	getAllFiles(tmpSaveDir, files);
+	for (auto file : files) {
+		DeleteFile(file.c_str());
+	}
 
 
-#if 1
+	//clearDir(tmpSaveDir);		// 清空以下存储中间数据的文件夹
+	initSocket();
+	deeplab_request(filePath, deeplabBbox); //根据deeplab结果crop原始图片，先crop是为了降低之后算法的计算量
+											//ifs << deeplabBbox.x << ' ' << deeplabBbox.y << ' ' << deeplabBbox.height << ' ' << deeplabBbox.width << endl;
+	MserFilter mf(srcImg, deeplabBbox);
+	mf.filter();
+	if (mode == 0)	// AUTO
+	{
+		if (mf.rowClusters.size() != 0)
+		{
+			return false;
+		}
+		else if (mf.colClusters.size() != 0)
+		{
+			for (int j = 0; j < mf.colResult.size(); j++)
+			{
+				Mat tmpImg(srcImg, mf.colResult[j]);
+				imwrite(tmpSaveDir + to_string(j) + ".jpg", tmpImg);
+			}
+			alex_request(tmpSaveDir, colOutput);
+
+			if (colOutput.size() == 0)
+				return false;
+			colOutput.insert(4, " ");
+			if (mf.colResult.size() > 1)
+			{
+				colOutput.insert(mf.colClusters[0].size() + 1, " ");
+			}
+			strcpy(output, colOutput.c_str());
+			return true;
+		}
+		else
+			return false;
+	}
+	if (mode == 1)	//FCOL_MODE
+	{
+		if (mf.colClusters.size() != 0)
+		{
+			for (int j = 0; j < mf.colResult.size(); j++)
+			{
+				Mat tmpImg(srcImg, mf.colResult[j]);
+				imwrite(tmpSaveDir + to_string(j) + ".jpg", tmpImg);
+			}
+			alex_request(tmpSaveDir, colOutput);
+			if (colOutput.size() == 0)
+				return false;
+			colOutput.insert(4, " ");
+			if (mf.colResult.size() > 1)
+			{
+				colOutput.insert(mf.colClusters[0].size() + 1, " ");
+			}
+			strcpy(output, colOutput.c_str());
+			return true;
+		}
+		else
+			return false;
+	}
+	if (mode == 2)	// FROW_MODE
+	{
+		return false;
+	}
+	return false;
+}
+bool detect(char* output, const char* input, int side) {
+	string imgpath(input);
+	//添加文件是否存在的判断代码
+	//if(!fileExist(imgpath))
+	Mat org_img = cv::imread(imgpath);
+	
+
+	vector<east_bndbox> east_boxes;
+	vector<Rect> ctpn_boxes;
+	Rect deeplab_box;
+	vector<Rect> mser_boxes;
+
+	string deeplab_imgpath(imgpath);
+	deeplab_imgpath.replace(deeplab_imgpath.find(".jpg"), 4, "_dl.jpg");
+
+	
+	clock_t start, end;
+	start = clock();
+
+	initSocket();
+	deeplab_request(imgpath, deeplab_box);
+
+	//利用基于Deeplab的结果再做处理
+	Mat deeplab_img = org_img(deeplab_box);
+	cv::imwrite(deeplab_imgpath, deeplab_img);
+	Mat deeplab_grayimg;
+	cvtColor(deeplab_img, deeplab_grayimg, CV_BGR2GRAY);
+
+	east_request(deeplab_imgpath, east_boxes);
+	mser_boxes= getMSER(deeplab_grayimg, mserThres, mserMinArea, mserMaxArea);
+
+	//添加路径是否存在的判断，若不存在则创建路径
+	string chars_savepath = "D:/savedImgs/";
+	if (!CheckFolderExist(chars_savepath)) {
+		CreateDirectory(chars_savepath.c_str(), NULL);
+	}
+
+	vector<string> files;
+	getAllFiles(chars_savepath, files);
+
+	for (auto file : files) {
+		DeleteFile(file.c_str());
+	}
+
+	string output_str;
+	NumberDetector* detector = new NumberDetector(deeplab_imgpath, ctpn_boxes, east_boxes, mser_boxes, deeplab_box);
+	MserFilter* filter = new MserFilter(org_img, deeplab_box);
+	switch (side) {
+	case AUTO:
+
+		if (filter->judgeSide() == COL_MODE) {
+			output_str = detector->detectVerticalNumber(chars_savepath);
+		}
+		else {
+			output_str = detector->detectRowNumber_front(chars_savepath);
+		}
+		
+		/*if (detector->judgeSide() == FCOL_MODE || detector->judgeMode_east()== FCOL_MODE){
+			output_str=detector->detectVerticalNumber(chars_savepath);
+		}
+		else {
+			output_str = detector->detectRowNumber_front(chars_savepath);
+		}*/
+		break;
+	case FCOL_MODE:
+		output_str = detector->detectVerticalNumber(chars_savepath);
+		break;
+	case FROW_MODE:
+		output_str = detector->detectRowNumber_front(chars_savepath);
+		break;
+	default:
+		return false;
+	}
+
+	end = clock();
+	
+	cout << "duration time: " << (end - start) / 1000.0 << "s" << endl;
+
+	strcpy(output, output_str.c_str());
+	return true;
+}
+
+
+#if 0
 bool detect(char* output1,char* output2,const char* input1,const char* input2, int mode) {
 	string img1 = input1;
 	string img2 = input2;
@@ -618,12 +753,12 @@ bool detect(char* output1,char* output2,const char* input1,const char* input2, i
 		DeleteFile(file.c_str());
 	}
 
-	MserFilter sidejudge1(grayimg1, mser_boxes_1, deeplabBox_1);
-	MserFilter sidejudge2(grayimg2, mser_boxes_2, deeplabBox_2);
+	//MserFilter sidejudge1(grayimg1, mser_boxes_1, deeplabBox_1);
+	//MserFilter sidejudge2(grayimg2, mser_boxes_2, deeplabBox_2);
 
 	string output_str_1 = "", output_str_2 = "";
 	if (mode == 1) {
-		output_str_1 = detector1->detectVerticalNumber(start, frontsavepath);
+		output_str_1 = detector1->detectVerticalNumber(frontsavepath);
 		output_str_2 = detectRegion(img2, east_boxes_2, deeplabBox_2, mser_boxes_2, detector2, start);
 	}
 	else {
@@ -632,14 +767,14 @@ bool detect(char* output1,char* output2,const char* input1,const char* input2, i
 			output_str_1 = detectRegion(img1, east_boxes_1, deeplabBox_1, mser_boxes_1, detector1, start);
 		}
 		else {
-			output_str_1 = detector1->detectVerticalNumber(start, frontsavepath);
+			output_str_1 = detector1->detectVerticalNumber(frontsavepath);
 		}
 
 		if (detector2->judgeSide() == 0) {
 			output_str_2 = detectRegion(img2, east_boxes_2, deeplabBox_2, mser_boxes_2, detector2, start);
 		}
 		else {
-			output_str_2 = detector2->detectVerticalNumber(start, frontsavepath);
+			output_str_2 = detector2->detectVerticalNumber(frontsavepath);
 		}
 
 	}
@@ -660,27 +795,28 @@ bool detect(char* output1,char* output2,const char* input1,const char* input2, i
 
 #if 0
 //using namespace std;
-string img1 = "D:\\ContainerIMG\\2xianghao\\0008\\126_0008_170504_101408_Front_03.jpg";
-string img2 = "D:\\ContainerIMG\\2xianghao\\0001\\126_0001_170504_091158_Rear_03.jpg";
+string img1 = "D:\\col_img\\35.jpg";
+string img2 = "D:\\testIMG\\253.jpg";
 
 char* output1 = new char[100];
 char* output2 = new char[100];
 
 int main() {
 
-	string testPath1= "D:/TESTimg/back";
+	string testPath1= "D:/col_img/";
 	vector<string> files1;
 	getAllFiles(testPath1, files1);
-	string testPath2 = "D:/TESTimg/front";
+	/*string testPath2 = "D:/TESTimg/front";
 	vector<string> files2;
-	getAllFiles(testPath2, files2);
+	getAllFiles(testPath2, files2);*/
 
-	for (int i = 0;i < 121;i++) {
+	for (int i = 0;i < files1.size();i++) {
+	contDetect(output1, files1[i].c_str(), AUTO);
+		//detect(output1, output2, img1.c_str(), img2.c_str(), 0);
 
-		detect(output1, output2, files1[i].c_str(), files2[i].c_str(), 0);
-
-		cout << output1 << endl;
-		cout << output2 << endl;
+	cout << output1 << endl;
+	cv::destroyAllWindows();
+		//cout << output2 << endl;
 	}
 	int tmp;
 	scanf_s("%d", &tmp);
@@ -688,150 +824,3 @@ int main() {
 }
 #endif
 
-
-#if 0
-int main(int argc, char** argv) {
-	string frontsavepath = "D:/frontSaveImg/";
-	string backsavepath = "D:/savedimgs/";
-
-	/*string testVerify =  "CBHU3202732";
-	string testVerify2 = "CBHU3212733";
-
-	if (verifyContainerCode(testVerify)) {
-		cout << "true" << endl;
-	}
-	else {
-		cout << "false" << endl;
-	}
-
-	if (verifyContainerCode(testVerify2)) {
-		cout << "true" << endl;
-	}
-	else {
-		cout << "false" << endl;
-	}
-
-	scanf("%d");*/
-	// No。17 front 有破损，但检测无误
-	// 模糊的图片对MSER有很大干扰，需要添加补全检测的代码
-	// 聚类的代码还有问题，34 前向面聚类错误
-	// no。23 front
-	// no。24
-
-	//读取所有需要测试图片的路径
-	//存入files中
-	string rootpath = "D:/TESTimg/back";
-	//string rootpath = "D:/selected";
-	namespace fs = boost::filesystem;
-	fs::path fullpath(rootpath, fs::native);
-	if (!fs::exists(fullpath)) { return -1; }
-	fs::directory_iterator end_iter;
-
-	vector<string> files;
-	for (fs::directory_iterator iter(fullpath);iter != end_iter;iter++) {
-		files.push_back(iter->path().string());
-		//cout << iter->path().string() << endl;
-	}
-
-	//files.push_back("D:\\ContainerIMG\\2xianghao\\0001\\126_0001_170504_091158_Rear_03.jpg");
-
-	for (string imgpath : files) {
-
-		initSocket();
-		clock_t start, end;
-		start = clock();
-		
-		char* org_imgpath_ptr = new char[imgpath.size()];
-		strcpy(org_imgpath_ptr, imgpath.c_str());
-		string org_imgpath(org_imgpath_ptr);
-		
-
-
-		//load image and convert to gray image
-		Mat org_img = cv::imread(imgpath);
-		Mat gray_img;
-		cv::cvtColor(org_img, gray_img, CV_BGR2GRAY);
-
-		vector<cv::Rect> ctpn_rects;
-		vector<east_bndbox> east_boxes;
-		Rect deeplabBox;
-		vector<Rect> mser_boxes;
-
-		deeplab_request(imgpath, deeplabBox);
-		mser_boxes = getMSER(gray_img, mserThres, mserMinArea, mserMaxArea);
-
-		
-		//cout << org_img.type()<< endl;
-		
-		if (*argv[1] == '1') {
-			east_request(imgpath, east_boxes);
-			NumberDetector *detector=new NumberDetector(org_imgpath, ctpn_rects, east_boxes, mser_boxes, deeplabBox);
-
-			//detector.detectHorizontalNumber(start,backsavepath);
-			
-			cout << imgpath << endl;
-			cout<<detectRegion(imgpath, east_boxes, deeplabBox, mser_boxes, detector, start)<<endl;
-
-		}
-		else {
-
-			Mat rotate_img(org_img.cols, org_img.rows, org_img.type());
-			Mat rotate_flip_img(org_img.cols, org_img.rows, org_img.type());
-			float width = org_img.cols;
-			float height = org_img.rows;
-
-			float centerpoint = width / 2;
-			cv::Point2f center(centerpoint, centerpoint);
-			Mat rotmat = cv::getRotationMatrix2D(center, 90, 1);
-			cv::warpAffine(org_img, rotate_img, rotmat, rotate_img.size());
-
-			cv::flip(rotate_img, rotate_flip_img, 0);
-			//cv::namedWindow("rotate", CV_WINDOW_AUTOSIZE);
-			//cv::imshow("rotate", rotate_flip_img);
-			//cv::waitKey(0);
-			string newimgpath = imgpath.replace(imgpath.find(".jpg"), 4, "_rotateflip.jpg");
-			cv::imwrite(newimgpath, rotate_flip_img);
-			//ctpn_request(newimgpath, ctpn_rects,true);
-
-			
-
-			
-			
-			NumberDetector detector(org_imgpath, ctpn_rects, east_boxes, mser_boxes, deeplabBox);
-
-			cout << detector.judgeSide() << endl;
-
-			//detector.detectVerticalNumber(start, frontsavepath);
-			//end = clock();
-		}
-
-
-
-
-
-
-
-		/*Mat orig_img = cv::imread(imgpath);
-		cout << orig_img.cols << endl;
-		cout << orig_img.rows << endl;
-		Mat draw_img;
-		org_img.copyTo(draw_img);
-		for (auto rect : ctpn_rects)
-			cv::rectangle(draw_img, rect, red);
-		for (auto box : east_boxes) {
-			vector<cv::Point> points;
-			points.push_back(cv::Point(box.x0, box.y0));
-			points.push_back(cv::Point(box.x1, box.y1));
-			points.push_back(cv::Point(box.x2, box.y2));
-			points.push_back(cv::Point(box.x3, box.y3));
-			cv::polylines(draw_img, points, 1, green, 2);
-		}
-		cv::rectangle(draw_img, deeplabBox, red, 2);
-		cv::imshow("nn detection", draw_img);
-		cv::waitKey(0);*/
-
-		cv::destroyAllWindows();
-	}
-
-}
-#endif

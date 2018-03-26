@@ -3,10 +3,12 @@
 #include "utils.h"
 #include "socketcpp\tcpClient.h"
 
+#include "config.h"
 using namespace std;
 //#include <iostream>
 NumberDetector::NumberDetector(string& imgpath, vector<Rect>& ctpn_boxes, vector<east_bndbox>& east_boxes, vector<Rect>& mser_boxes, Rect deeplab_box) {
 	_org_img = cv::imread(imgpath);
+	_imgpath = imgpath;
 	_ctpn_boxes = ctpn_boxes;
 	_east_boxes = east_boxes;
 	_mser_boxes = mser_boxes;
@@ -40,7 +42,8 @@ void NumberDetector::filterByCTPNVertical(vector<Rect>& input_boxes, vector<Rect
 
 void NumberDetector::geometryFilter(vector<Rect>& input_boxes, vector<Rect>& geometry_filter, int strict_mode) {
 	for (auto rect : input_boxes) {
-		if (rect.height > rect.width && rect.height *1.0 /rect.width<10) {
+		if (rect.height > rect.width && rect.height *1.0 /rect.width<10 && rect.x>0.5*_org_img.cols
+			&& abs(_org_img.cols-rect.x-rect.height)>20) {
 			if(strict_mode==1 && rect.height *1.0 / rect.width>1.3)
 				geometry_filter.push_back(rect);
 			else
@@ -49,17 +52,17 @@ void NumberDetector::geometryFilter(vector<Rect>& input_boxes, vector<Rect>& geo
 	}
 }
 
-//0: row_mode
+//2: row_mode
 //1: col_mode
 int NumberDetector::judgeSide() {
 	vector<Rect> geometry_filter;
 	geometryFilter(_mser_boxes, geometry_filter,1);
 
-	vector<Rect> deeplab_filter;
-	filterByDeeplab(geometry_filter, deeplab_filter);
+	//vector<Rect> deeplab_filter;
+	//filterByDeeplab(geometry_filter, deeplab_filter);
 
 	vector<vector<Rect>> clusters;
-	boxClusteringVertical(deeplab_filter, clusters, 10, 10, 80);
+	boxClusteringVertical(geometry_filter, clusters, 10, 10, 80);
 
 	Mat drawimg;
 #if 0
@@ -74,7 +77,7 @@ int NumberDetector::judgeSide() {
 #endif
 
 
-	int col_flag = 0;
+	int col_flag = 2;
 	for (auto cluster : clusters) {
 		int n = cluster.size();
 		Rect first_rect = cluster[0];
@@ -84,7 +87,7 @@ int NumberDetector::judgeSide() {
 		int container_height = _deeplab_box.height;
 
 		float ratio = 1.0*length / container_height;
-		//cout << ratio << endl;
+		cout << ratio << endl;
 		if (ratio> 0.43)
 			col_flag = 1;
 	}
@@ -175,7 +178,7 @@ void NumberDetector::boxClusteringVertical(vector<Rect>& input_boxes,
 	}
 }
  
-string NumberDetector::detectVerticalNumber(long start, string savepath) {
+string NumberDetector::detectVerticalNumber(string savepath) {
 	int mserSize = _mser_boxes.size();
 
 	Mat drawimg;
@@ -187,17 +190,17 @@ string NumberDetector::detectVerticalNumber(long start, string savepath) {
 	//vector<Rect> ctpn_filter;
 	//filterByCTPNVertical(geometry_filter, ctpn_filter, 20, 20);
 
-	vector<Rect> deeplab_filter;
-	filterByDeeplab(geometry_filter, deeplab_filter);
+	//vector<Rect> deeplab_filter;
+	//filterByDeeplab(geometry_filter, deeplab_filter);
 
 	
 
 	vector<vector<Rect>> clusters;
-	boxClusteringVertical(deeplab_filter, clusters, 10,10,80);
+	boxClusteringVertical(geometry_filter, clusters, 10,10,80);
 
-#ifdef SHOW_FILTERED_MSER
+#if 0
 	_org_img.copyTo(drawimg);
-	for (auto rect : deeplab_filter) {
+	for (auto rect : geometry_filter) {
 		cv::rectangle(drawimg, rect, (0, 0, 255), 1);
 	}
 	cv::imshow("mser", drawimg);
@@ -211,12 +214,12 @@ string NumberDetector::detectVerticalNumber(long start, string savepath) {
 	int maxLenClusterID;
 	for (int i = 0;i < n;i++) {
 		int newlen = getRectClusterLength(clusters[i], 1);
-		if (newlen > maxlen) {
+		if (newlen > maxlen && getAverageHeight(clusters[i])>20) {
 			maxlen = newlen;
 			maxLenClusterID = i;
 		}
 	}
-#ifdef SHOW_CLUSTERING
+#if 0
 	_org_img.copyTo(drawimg);
 	for (auto rects : clusters) {
 		cv::Scalar color(1.0*rand()/RAND_MAX*255, 1.0*rand()/ RAND_MAX*255, 1.0*rand()/ RAND_MAX*255);
@@ -243,10 +246,10 @@ string NumberDetector::detectVerticalNumber(long start, string savepath) {
 	//removeOverlap(numberVertical, slimRect);
 
 
-	float average_height=0;
-	for (auto rect : numberVertical)
+	float average_height=getAverageHeight(numberVertical);
+	/*for (auto rect : numberVertical)
 		average_height += rect.height;
-	average_height=average_height / numberVertical.size();
+	average_height=average_height / numberVertical.size();*/
 
 
 	//利用平均高度信息进行分割，分割出单个字符
@@ -267,24 +270,30 @@ string NumberDetector::detectVerticalNumber(long start, string savepath) {
 	cv::waitKey(0);
 #endif
 	//string savepath = "D:/frontSaveImg/";
-	int nn = mergedRect.size();
+
+	int firstGap, lastGap;
+	findFirstAndLastGap(mergedRect, firstGap, lastGap);
+	vector<Rect> fillGapRects;
+	fillGap(mergedRect,fillGapRects,firstGap,lastGap);
+	int nn = fillGapRects.size();
 	for (int i = 0; i < nn; i++) {
+		Rect rect = fillGapRects[i];
+		scaleSingleRect(rect, 0.3, 0.1, _org_img.cols, _org_img.rows);
+		
 		string imgpath = savepath + std::to_string(i) + ".jpg";
-		cv::imwrite(imgpath, _org_img(mergedRect[i]));
+		cv::imwrite(imgpath, _org_img(rect));
 	}
 	string recog_result;
 	alex_request(savepath, recog_result);
 
 	
-	//显示检测识别所需的时间
-	long end = clock();
-	double dur = (double)(end - start);
-	printf("duration Time:%f\n", (dur / CLOCKS_PER_SEC));
+
 
 #if 0
 	_org_img.copyTo(drawimg);
-	for (int i = 0;i < mergedRect.size();i++) {
-		Rect rect = mergedRect[i];
+	for (int i = 0;i < fillGapRects.size();i++) {
+		
+		Rect rect = fillGapRects[i];
 		scaleSingleRect(rect, 0.2, 0.1, _org_img.cols, _org_img.rows);
 		cv::rectangle(drawimg, rect, cv::Scalar(0, 0, 255), 1);
 		char digit[2];
@@ -292,7 +301,7 @@ string NumberDetector::detectVerticalNumber(long start, string savepath) {
 		digit[1] = '\0';
 		cv::putText(drawimg, digit, cv::Point(rect.x+rect.width, rect.y+rect.height), 1, 1.6, cv::Scalar(0, 255, 255),2);
 	}
-	cv::imshow("recogn", drawimg);
+	cv::imshow(_imgpath, drawimg);
 	cv::waitKey(0);
 #endif
 	recog_result.insert(4, " ");
@@ -308,12 +317,18 @@ int NumberDetector::getRectClusterLength(vector<Rect>& cluster, int direction) {
 		return cluster[n].y + cluster[n].height - cluster[0].y;
 }
 
-
+void NumberDetector::filterEastByPosition(vector<Rect>& src, vector<Rect>& dst) {
+	float midline_x = _org_img.cols*0.5;
+	for (auto rect : src) {
+		if (rect.x > midline_x)
+			dst.push_back(rect);
+	}
+}
 
 //#define SHOW_FINAL
 //#define SHOW_FILTER
 //#define SHOW_CLUSTER
-void NumberDetector::detectHorizontalNumber(long start, vector<vector<Rect>>& dst_rects, string savepath) {
+void NumberDetector::detectHorizontalNumber(vector<vector<Rect>>& dst_rects, string savepath) {
 
 	Mat draw_img;
 	vector<Rect> east_rects;
@@ -321,8 +336,10 @@ void NumberDetector::detectHorizontalNumber(long start, vector<vector<Rect>>& ds
 		east_rects.push_back(eastbox2rect(box));
 	}
 
+	//sort(east_rects.begin(), east_rects.end(), sortByY);
+
 	vector<Rect> filtered_rects;
-	filterEASTbyDeeplab(east_rects, filtered_rects);
+	filterEastByPosition(east_rects, filtered_rects);
 
 #ifdef SHOW_FILTER
 	_org_img.copyTo(draw_img);
@@ -472,6 +489,7 @@ void NumberDetector::simpleClusterByHorizon(vector<Rect>& src, vector<vector<Rec
 			clusters[flag].push_back(rect);
 		}
 	}
+	sort(clusters.begin(), clusters.end(), sortClusterByY);
 }
 void NumberDetector::filterEASTbyDeeplab(vector<Rect>& src, vector<Rect>& dst) {
 	sort(src.begin(), src.end(), sortByY);
@@ -511,4 +529,399 @@ int NumberDetector::findVerifyNumber(Rect& rect, Rect& verifyRect, int midthres,
 		}
 	}
 	return success;
+}
+
+
+//如果出现高宽比大于3的east box，则判定为col mode
+int NumberDetector::judgeMode_east() {
+	for (auto box : _east_boxes) {
+		float width = box.x1 - box.x0;
+		float height = box.y3 - box.y0;
+		if (height / width > 4)
+			return 1;
+	}
+	return 2;
+}
+
+
+//利用east的结果对mser进行过滤
+void NumberDetector::filterByEast(vector<Rect>& mser_boxes, vector<east_bndbox>& east_boxes, vector<Rect>& filtered_boxes,float filterHeightThres,float filterYThres, float filterDistThres) {
+	for (auto box : mser_boxes) {
+		for (auto east_bndbox : east_boxes) {
+			float avgheight = (east_bndbox.y3 - east_bndbox.y0 + east_bndbox.y2 - east_bndbox.y1) / 2.0;
+			float avgy = (east_bndbox.y0 + east_bndbox.y3 + east_bndbox.y1 + east_bndbox.y2) / 4.0;
+			float midline = box.x + box.height / 2.0;
+			float dist;
+			if (midline < east_bndbox.x0) {
+				dist = east_bndbox.x0 - midline;
+				if (dist > box.width * 3)
+					dist = 1000;
+			}
+			else if (midline > east_bndbox.x1)
+				dist = midline - east_bndbox.x1;
+			else
+				dist = 0;
+			//box width largers than 3 
+
+			float whratio = box.height*1.0 / box.width;
+			if (whratio > 1.3 && box.width > 3 && abs(box.height - avgheight) < filterHeightThres && abs(box.y + box.height / 2.0 - avgy) < filterYThres && dist < filterDistThres && box.height>box.width) {
+				filtered_boxes.push_back(box);
+			}
+		}
+	}
+};
+
+string NumberDetector::detectRowNumber_front(string imgsavepath) {
+	
+	Mat img_gray;
+	cvtColor(_org_img, img_gray, CV_BGR2GRAY);
+	
+	Mat showimg, showimg2, showimg3, showimg4, showimg5;
+	_org_img.copyTo(showimg);
+	_org_img.copyTo(showimg2);
+	_org_img.copyTo(showimg3);
+	_org_img.copyTo(showimg4);
+	_org_img.copyTo(showimg5);
+
+
+
+
+	vector<Rect> filter_boxes;
+	filterByEast(_mser_boxes, _east_boxes, filter_boxes, eastFilterHeightThres, eastFilterYThres,eastFilterDistThres);
+
+	vector<Rect> slim_rects;
+	removeOverlap(filter_boxes, slim_rects);
+
+	vector<vector<Rect>> clusters;
+	clusteringRects(slim_rects, clusters, 100, 20, 15);
+
+#if 0
+	for (auto rect : filter_boxes) {
+		rectangle(showimg3, rect, red, 1);
+	}
+	imshow("mser", showimg3);
+	cv::waitKey(0);
+
+
+	Mat draw_img;
+	_org_img.copyTo(draw_img);
+	for (auto box : _east_boxes) {
+		vector<cv::Point> points;
+		points.push_back(cv::Point(box.x0, box.y0));
+		points.push_back(cv::Point(box.x1, box.y1));
+		points.push_back(cv::Point(box.x2, box.y2));
+		points.push_back(cv::Point(box.x3, box.y3));
+		cv::polylines(draw_img, points, 1, green, 2);
+	}
+	cv::imshow("nn detection", draw_img);
+	cv::waitKey(0);
+#endif 
+
+	int clusterNum = clusters.size();
+
+	vector<int> attrs;
+	findClusterAttr(clusters, attrs);
+	int mid = -1, up = -1, down = -1;
+	for (int i = 0; i < clusterNum; i++) {
+		float sumheight = 0;
+		int clustersize = clusters[i].size();
+		for (auto rect : clusters[i])
+			sumheight += rect.height;
+		float avgheight = sumheight / clustersize;
+
+		float clusterlength = clusters[i][clustersize - 1].x + clusters[i][clustersize - 1].width - clusters[i][0].x;
+		float lhratio = clusterlength / avgheight;
+		if (attrs[i] > 5) {
+			mid = i;
+			break;
+		}
+	}
+
+
+
+	vector<Rect> midboxes, upboxes, downboxes;
+	if (mid != -1 && clusters[mid][0].y<_org_img.rows*0.5) {
+		//find "company code" and "container type" 
+		up = findCompanyNumber(clusters, mid, 30, 200);
+		down = findContainerType(clusters, mid, 100, 200);
+
+		locateNumber(_east_boxes, clusters[mid], midboxes);
+
+		//修正EAST检测框的边界
+		eastBoderRefine(midboxes, slim_rects);
+
+
+
+		if (up != -1) {
+
+			locateNumber(_east_boxes, clusters[up], upboxes);
+
+			if (midboxes.size() == 1) {
+				Rect rect = midboxes[0];
+				midboxes.pop_back();
+
+				Rect rect1(rect.x, rect.y, rect.width * 4 / 7.0, rect.height);
+				Rect rect2(rect.x + rect.width * 5 / 7.0, rect.y, rect.width * 2 / 7.0, rect.height);
+				midboxes.push_back(rect1);
+				midboxes.push_back(rect2);
+			}
+
+		}
+		if (down != -1)
+			locateNumber(_east_boxes, clusters[down], downboxes);
+
+		Rect verifyDigit;
+		int verifyid = 0;
+
+
+		Rect rightMostRect = clusters[mid][clusters[mid].size() - 1];
+		int leftBorder = rightMostRect.x + rightMostRect.width;
+
+
+		sort(midboxes.begin(), midboxes.end(), sortByX);
+		vector<Rect> newmidBoxes;
+		if (up == -1) {
+
+			int area = 0;
+			for (auto rect1 : clusters[mid]) {
+				int overlap = 0;
+				for (auto rect2 : midboxes) {
+					if (isOverlap(rect1, rect2)) {
+						overlap = 1;
+						break;
+					}
+				}
+				if (overlap == 0) {
+					if (rect1.width*rect1.height > area) {
+						verifyDigit = rect1;
+						verifyid = 1;
+						area = rect1.width*rect1.height;
+					}
+				}
+			}
+			if (verifyid == 1)
+				midboxes.push_back(verifyDigit);
+		}
+		else {
+			Rect rect;
+			int nn = midboxes.size() - 1;
+			rect.x = midboxes[nn].x;
+			rect.y = midboxes[nn].y;
+			rect.height = midboxes[nn].height;
+			rect.width = leftBorder - rect.x;
+			for (int i = 0; i < nn; i++)
+				newmidBoxes.push_back(midboxes[i]);
+			newmidBoxes.push_back(rect);
+			midboxes = newmidBoxes;
+		}
+
+	}
+	else {
+		vector<vector<Rect>> dst_rects;
+		detectHorizontalNumber(dst_rects, "");
+		upboxes = dst_rects[0];
+		midboxes = dst_rects[1];
+		downboxes = dst_rects[2];
+
+		if (upboxes.size() > 0)
+			up = 1;
+		if (midboxes.size() > 0)
+			mid = 1;
+		if (downboxes.size() > 0)
+			down = 1;
+	}
+
+
+	//处理EAST漏检的情况
+	if (up != -1 && midboxes.size()>=2) {
+		float dist = midboxes[1].x - midboxes[0].x - midboxes[0].width;
+		if (dist > 20)
+			midboxes[0].width += 20;
+	}
+
+
+
+	int count = 0;
+	for (auto rect : upboxes) {
+		Mat img = _org_img(rect);
+		string path = imgsavepath + to_string(count) + ".jpg";
+		cv::imwrite(path, img);
+		count++;
+	}
+
+	//mergeVerifyNum(midboxes);
+	for (auto rect : midboxes) {
+
+
+		scaleSingleRect(rect, 0.1, 0.1, _org_img.cols, _org_img.rows);
+		Mat img = _org_img(rect);
+		if (rect.width < rect.height) {
+			Mat newimg(rect.height, rect.width * 2, img.type());
+			cv::hconcat(img, img, newimg);
+			img = newimg;
+		}
+		string path = imgsavepath + to_string(count) + ".jpg";
+
+		cv::imwrite(path, img);
+		count++;
+	}
+	for (auto rect : downboxes) {
+		scaleSingleRect(rect, 0.2, 0.1, _org_img.cols, _org_img.rows);
+		Mat img = _org_img(rect);
+		string path = imgsavepath + to_string(count) + ".jpg";
+		cv::imwrite(path, img);
+		count++;
+	}
+
+	vector<string> strs;
+	crnn_request(imgsavepath, strs);
+
+	count = 0;
+
+	string output_str = "";
+
+	for (auto rect : upboxes) {
+		rectangle(showimg4, rect, green, 2);
+
+
+		string chechdatabase;
+		conNuMostSimMatch(strs[count], chechdatabase);
+		output_str = output_str + chechdatabase;
+
+		cv::putText(showimg4, chechdatabase, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
+		count++;
+	}
+	for (int i = 0; i < midboxes.size(); i++) {
+		Rect rect = midboxes[i];
+		rectangle(showimg4, rect, green, 2);
+		if (up == -1 && i == 0) {
+			char firstchar = strs[count].c_str()[0];
+			string restchars = strs[count].c_str() + 1;
+			//string newstr;
+
+			string checkdatabase;
+			conNuMostSimMatch(strs[count], checkdatabase);
+			
+			
+			if (checkdatabase.compare("") == 0) {
+				output_str = output_str + strs[count];
+				cv::putText(showimg4, strs[count], cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
+				
+			}
+			else {
+				output_str = output_str + checkdatabase;
+				cv::putText(showimg4, checkdatabase, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
+			}
+
+		}
+		else if (midboxes[i].width<midboxes[i].height) {
+			addUnknownMark(output_str, 10, 8);
+
+			int lastid = strs[count].size();
+			string lastdigit = strs[count].c_str() + lastid - 1;
+			if (lastdigit[0] == 'z')
+				lastdigit = '2';
+			else if (lastdigit[0] == 'o' || lastdigit[0] == 'c')
+				lastdigit = '0';
+			else if (lastdigit[0] == 'b')
+				lastdigit = '3';
+			else if (lastdigit[0] == 'd' || lastdigit[0] == 'q' || lastdigit[0] == 'e' || lastdigit[0] == 'i')
+				lastdigit = '1';
+
+			output_str = output_str + lastdigit;
+			cv::putText(showimg4, lastdigit, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
+		}
+		else if (up != -1 && midboxes.size() == 1 && strs[count].size()>7) {
+			string contNum(strs[count]);
+			contNum.erase(4, 1);
+			cv::putText(showimg4, contNum, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
+			output_str = output_str + contNum;
+		}
+		else {
+			cv::putText(showimg4, strs[count], cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
+			output_str = output_str + strs[count];
+		}
+
+		count++;
+	}
+	addUnknownMark(output_str, 11, 8);
+	for (auto rect : downboxes) {
+		rectangle(showimg4, rect, green, 2);
+
+		string findDatabase;
+
+		mostSimMatch(strs[count], findDatabase);
+		cv::putText(showimg4, findDatabase, cv::Point(rect.x, rect.y), 1.9, 1.7, red, 2);
+
+		output_str = output_str + findDatabase;
+		count++;
+	}
+	addUnknownMark(output_str, 15, 8);
+	output_str.insert(11, " ");
+	output_str.insert(4, " ");
+	//cout << output_str << endl;
+#if 0
+	cv::imshow(_imgpath, showimg4);
+	cv::waitKey(0);
+#endif 
+#if 0
+	for (int i = 0; i < clusterNum; i++) {
+		cv::Scalar rectColor(rand()*1.0 / RAND_MAX * 255, rand()*1.0 / RAND_MAX * 255, rand()*1.0 / RAND_MAX * 255);
+		for (auto rect : clusters[i]) {
+			float v = 255.0*i / clusterNum;
+
+			rectangle(showimg5, rect, rectColor);
+		}
+	}
+	cv::imshow("CLUSTER", showimg5);
+	cv::waitKey(0);
+#endif
+	std::transform(output_str.begin(), output_str.end(), output_str.begin(), ::toupper);
+	return output_str;
+}
+
+void NumberDetector::locateNumber(vector<east_bndbox>& east_boxes, vector<Rect> cluster, vector<Rect>& boxes) {
+	int eastnum = east_boxes.size();
+	for (int i = 0; i < eastnum; i++) {
+		east_bndbox box = east_boxes[i];
+		int x0 = std::min(box.x0, box.x3);
+		int x1 = std::max(box.x1, box.x2);
+		int y0 = std::min(box.y0, box.y1);
+		int y1 = std::max(box.y2, box.y3);
+		if (x0 < 0)
+			x0 = 0;
+		if (y0 < 0)
+			y0 = 0;
+		Rect rect0(x0, y0, x1 - x0, y1 - y0);
+		for (auto rect1 : cluster) {
+			if (isOverlap(rect0, rect1)) {
+				int width = std::min(rect0.x + rect0.width, rect1.x + rect1.width) - std::max(rect0.x, rect1.x);
+				int height = std::min(rect0.y + rect0.height, rect1.y + rect1.height) - std::max(rect0.y, rect1.y);
+				if (width > 0 && height > 0) {
+					int area = rect1.width*rect1.height;
+					if (width*height*1.0 / area > 0.9) {
+						boxes.push_back(rect0);
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+void NumberDetector::eastBoderRefine(vector<Rect>& boxes, vector<Rect>& filtered_mser) {
+	for (int i = 0; i < boxes.size(); i++) {
+		int rightmost_border = 0;
+		for (auto rect : filtered_mser) {
+			if (isOverlap(boxes[i], rect)) {
+				int newborder = rect.x + rect.width;
+				if (newborder > boxes[i].x + boxes[i].width && newborder > rightmost_border) {
+					rightmost_border = newborder;
+				}
+			}
+		}
+		if (rightmost_border != 0)
+			boxes[i].width = rightmost_border - boxes[i].x;
+	}
+
+
 }

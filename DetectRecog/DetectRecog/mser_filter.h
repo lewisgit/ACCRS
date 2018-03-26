@@ -9,47 +9,54 @@
 #include "utils.h"
 #include <iostream>
 
-using namespace cv;
 using namespace std;
 
-#define ROW_MODE 1
-#define COL_MODE 2
 #define WRONG 0
+#define ROW_MODE 1
+#define ROW_LOOSE_MODE 2	//第二次行聚类时放宽了一些条件
+#define COL_MODE 3
+#define COL_LOOSE_MODE 4
 
 class MserFilter
 {
 public:
-	MserFilter(Mat srcImg, Rect deeplabBbox);
-	MserFilter(Mat srcImg, vector<Rect> bboxes, Rect deeplabBbox);
+	MserFilter(cv::Mat srcImg, cv::Rect deeplabBbox);
 	void drawMsers(string outputPath);
-	void drawBboxes(string outputPath);
-	void drawClusters(string outputPath, vector<vector<Rect>> clusters);
+	void drawBboxes(string outputPath, vector<cv::Rect> bboxes);
+	void drawClusters(string outputPath, vector<vector<cv::Rect>> clusters);
+	void drawResult(string outputPath, vector<cv::Rect> result);
 	void filter(void);
-	void patch(void);
 	int judgeSide(void);
 	virtual ~MserFilter();
 public:
-	vector<vector<Rect>> rowClusters;
-	vector<vector<Rect>> colClusters;
+	vector<vector<cv::Rect>> rowClusters;
+	vector<vector<cv::Rect>> colClusters;
+	vector<cv::Rect> rowResult;
+	vector<cv::Rect> colResult;
 
 private:
-	Mat srcImg;
-	Rect deeplabBbox;
-	vector<vector<Point>> msers;
-	vector<Rect> bboxes;
+	cv::Mat srcImg;
+	cv::Rect deeplabBbox;
+	vector<vector<cv::Point>> msers;
+	vector<cv::Rect> bboxes;
 
 	// 阈值
 	double mserHeightSmall, mserHeightHuge, mserWidthHuge;
 
 private:
 	//一些供调用的功能函数
-	bool isClose(Rect r1, Rect r2, int disThres, int mode);			//用于聚类时判断是否属于一类
+	bool isClose(cv::Rect r1, cv::Rect r2, int disThres, int mode);			//用于聚类时判断是否属于一类
 	void deeplabFilter(void);
 	void singleBboxFilter(void);
 	void clusterFilter(void);
-	int rowClusterFilter(void);
-	int colClusterFilter(void);
-	void cluster(int disThres, int mode);
+	int clusterProcess(int mode);
+	void findMainRowCluster(vector<cv::Rect>& mainRowCluster);
+	void delByMainRow(vector<cv::Rect> mainRowCluster);
+	void buildRowResult(void);
+	void findMainColCluster(vector<cv::Rect>& mainColCluster);
+	void delByMainCol(vector<cv::Rect> mainColCluster);
+	void buildColResult(void);
+	void MserFilter::cluster(int disThres, vector<cv::Rect> bboxes, vector<vector<cv::Rect>>& clusters, int mode);
 };
 
 #endif

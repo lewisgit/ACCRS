@@ -10,7 +10,7 @@ import json
 
 #Global Variables
 
-caffe.set_mode_gpu()
+caffe.set_mode_cpu()
 #caffe_root='/home/lewis/caffe-opencv-python'
 
 model_def='deploy.prototxt'

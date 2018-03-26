@@ -1,6 +1,6 @@
 #pragma once
 #include <opencv2/core.hpp>
 
-cv::Scalar blue(255, 0, 0);
-cv::Scalar green(0, 255, 0);
-cv::Scalar red(0, 0, 255);
+#define blue cv::Scalar(255, 0, 0)
+#define green cv::Scalar(0, 255, 0)
+#define red cv::Scalar(0, 0, 255)

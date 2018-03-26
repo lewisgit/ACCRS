@@ -265,8 +265,13 @@ void splitRectsByAverageHeight(vector<Rect>& src,vector<Rect>& dst, float avrage
 			continue;
 		}
 		else {
-
-			if(abs(2*avrageHeight-bottom+top)<abs(avrageHeight - bottom + top)){
+			int numChar = round((bottom - top) / avrageHeight);
+			float height = (bottom - top)*1.0 / numChar;
+			for (int i = 0; i < numChar; i++) {
+				Rect splitrect(left, top+i*height, right - left, height);
+				dst.push_back(splitrect);
+			}
+			/*if(abs(2*avrageHeight-bottom+top)<abs(avrageHeight - bottom + top)){
 				Rect splitrect1(left, top, right - left, (bottom - top)*0.5);
 				Rect splitrect2(left, top+ (bottom - top)*0.5, right - left, (bottom - top)*0.5);
 				dst.push_back(splitrect1);
@@ -275,7 +280,7 @@ void splitRectsByAverageHeight(vector<Rect>& src,vector<Rect>& dst, float avrage
 			else {
 				Rect splitrect(left, top, right - left, bottom - top);
 				dst.push_back(splitrect);
-			}
+			}*/
 
 			tmp.clear();
 			top = rect.y;
@@ -377,6 +382,132 @@ void getAllFiles(string rootpath, vector<string>& files) {
 		files.push_back(iter->path().string());
 		//cout << iter->path().string() << endl;
 	}
+}
+
+void findFirstAndLastGap(vector<Rect>& rects, int& first, int& last) {
+	int n = rects.size();
+	first = -1;
+	last = -1;
+	for (int i = 0; i < n-1; i++) {
+		if (rects[i+1].y - rects[i].y-rects[i].height > rects[i].height*0.5) {
+			first = i;
+			break;
+		}
+	}
+	for (int i = n-1; i >0; i--) {
+		if (rects[i].y - rects[i-1].y- rects[i-1].height > rects[i-1].height*0.5) {
+			last = i-1;
+			break;
+		}
+	}
+}
+void fillGap(vector<Rect>& src, vector<Rect>& dst, int& first, int& last) {
+	for (int i = 0; i < src.size()-1; i++) {
+		bool isGap = (src[i+1].y - src[i].y - src[i].height) > src[i].height*0.5;
+		if (i == first && isGap && i<4) {
+			src[i].height = src[i + 1].y - src[i].y - src[i].height*0.5;
+			dst.push_back(src[i]);
+		}
+		else if (i != last && isGap) {
+			int numChar = round((src[i + 1].y - src[i].y)*1.0/ src[i].height);
+			int x = src[i].x;
+			int y = src[i].y;
+			int width = src[i].width;
+			int height = (src[i + 1].y - src[i].y)*1.0/numChar;
+			for (int j = 0; j < numChar; j++) {
+				dst.push_back(Rect(x, y + j*height, width, height));
+			}
+		}/*else if(i == last && isGap){
+			if ((src[i + 1].y - src[i].y) * 1.0 / src[i].height > 2.5) {
+				int numChar = round((src[i + 1].y - src[i].y- src[i].height*0.5)*1.0 / src[i].height);
+				int x = src[i].x;
+				int y = src[i].y;
+				int width = src[i].width;
+				int height = (src[i + 1].y - src[i].y)*1.0 / numChar;
+				for (int j = 0; j < numChar; j++) {
+					dst.push_back(Rect(x, y + j*height, width, height));
+				}
+			}
+		}*/
+		else {
+			dst.push_back(src[i]);
+		}
+	}
+	dst.push_back(src[src.size() - 1]);
+}
+
+float getAverageHeight(vector<Rect>& rects) {
+	float average_height = 0;
+	for (auto rect : rects)
+		average_height += rect.height;
+	average_height = average_height / rects.size();
+	return average_height;
+}
+bool sortByLen(vector<cv::Rect> v1, vector<cv::Rect> v2)
+{
+	return v1.size() > v2.size();
+}
+void getClusterBbox(vector<cv::Rect> &cluster, cv::Rect &bbox)
+{
+	int minX = 10000, minY = 10000, maxX = 0, maxY = 0;
+	for (int i = 0; i < cluster.size(); i++)
+	{
+		minX = min(minX, cluster[i].x);
+		minY = min(minY, cluster[i].y);
+		maxX = max(maxX, cluster[i].x + cluster[i].width);
+		maxY = max(maxY, cluster[i].y + cluster[i].height);
+	}
+	bbox.x = minX;
+	bbox.y = minY;
+	bbox.width = maxX - minX;
+	bbox.height = maxY - minY;
+}
+
+void getClusterAvgHW(vector<cv::Rect> &cluster, int &avgHeight, int &avgWidth)
+{
+	avgHeight = avgWidth = 0;
+	for (int j = 0; j < cluster.size(); j++)
+	{
+		avgHeight += cluster[j].height;
+		avgWidth += cluster[j].width;
+	}
+	avgHeight = avgHeight / cluster.size();
+	avgWidth = avgWidth / cluster.size();
+}
+void getClusterMaxHW(vector<cv::Rect> &cluster, int &maxHeight, int &maxWidth)
+{
+	maxHeight = maxWidth = 0;
+	for (int j = 0; j < cluster.size(); j++)
+	{
+		maxHeight = max(cluster[j].height, maxHeight);
+		maxWidth = max(cluster[j].height, maxWidth);
+	}
+}
+void addUnknownMark(string& str, int targetLen,int removePos) {
+	int n = str.size();
+	if (n < targetLen) {
+		while (str.size() < targetLen) {
+			str += '?';
+		}
+	}
+	if (n > targetLen) {
+		while (str.size() > targetLen) {
+			str.erase(removePos, 1);
+		}
+	}
+}
+//void clearDir(string path)
+//{
+//	boost::filesystem::path rootPath(path, boost::filesystem::native);
+//	boost::filesystem::directory_iterator end_iter;
+//	for (boost::filesystem::directory_iterator iter(rootPath); iter != end_iter; iter++)
+//		boost::filesystem::remove(iter->path());
+//}
+bool clusterSortByY(vector<cv::Rect>& c1, vector<cv::Rect>& c2)
+{
+	sort(c1.begin(), c1.end(), sortByY);
+	sort(c2.begin(), c2.end(), sortByY);
+	return c1[0].y < c2[0].y;
 }
 //static void
 //list_directory(

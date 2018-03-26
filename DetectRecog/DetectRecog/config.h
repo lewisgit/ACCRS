@@ -1,7 +1,10 @@
 #pragma once
-int mserThres = 2;
-int mserMinArea = 50;
-int mserMaxArea = 500;
+#define mserThres  2
+#define mserMinArea  0
+#define mserMaxArea  500
 
-float filterHeightThres = 15;
-float filterYThres = 15;
+
+//利用east过滤mser时的阈值（高度和距离）
+#define eastFilterHeightThres  15
+#define eastFilterYThres  15
+#define eastFilterDistThres 100
