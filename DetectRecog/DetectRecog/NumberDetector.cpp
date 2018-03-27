@@ -2,7 +2,7 @@
 #include "getMSER.hpp"
 #include "utils.h"
 #include "socketcpp\tcpClient.h"
-
+#include <regex>
 #include "config.h"
 using namespace std;
 //#include <iostream>
@@ -304,9 +304,34 @@ string NumberDetector::detectVerticalNumber(string savepath) {
 	cv::imshow(_imgpath, drawimg);
 	cv::waitKey(0);
 #endif
-	recog_result.insert(4, " ");
-	std::transform(recog_result.begin(), recog_result.end(), recog_result.begin(), ::toupper);
-	return recog_result;
+	//recog_result.insert(4, " ");
+	std::transform(recog_result.begin(), recog_result.end(), recog_result.begin(), ::tolower);
+	string company_code;
+	string container_code;
+	int flag = -1;
+	for (int i = 0; i < recog_result.size(); i++) {
+		if (recog_result[i] >= '0'&& recog_result[i] <= '9') {
+			flag = i;
+			company_code = string(recog_result, 0, i);
+			container_code = string(recog_result, i, recog_result.size()-i);
+			break;
+		}
+	}
+	string final_str;
+	if (flag <= 0) {
+		company_code = "????";
+		final_str = company_code + recog_result;
+	}
+	else {
+		string new_company_str;
+		conNuMostSimMatch(company_code, new_company_str);
+		final_str = new_company_str + container_code;
+		
+	}
+	std::transform(final_str.begin(), final_str.end(), final_str.begin(), ::toupper);
+	addUnknownMark(final_str, 11, 11);
+	final_str.insert(4, " ");
+	return final_str;
 };
 
 int NumberDetector::getRectClusterLength(vector<Rect>& cluster, int direction) {

@@ -1,4 +1,4 @@
-//#include "pythonCall.h"
+ï»¿//#include "pythonCall.h"
 
 #define DLL_GEN
 
@@ -499,42 +499,56 @@ bool  CheckFolderExist(const string &strPath)
 }
 
 
-
-
-bool detectSide(char *output, const char *input, int mode)
+bool detectSide(char *output,const char *input, int mode)
 {
-	string emptystr = "";
-	strcpy(output, emptystr.c_str());
 	string filePath(input);
 	string tmpSaveDir("D:/SideSaveImg/");
+	Rect deeplabBbox;			// deeplabÂµÃ„Â½Ã¡Â¹Ã»
+	vector<string> rowOutput;	// ÃÃ¤ÂºÃ…ÃŠÃ‡ÂºÃ¡Ã—Ã…ÂµÃ„ÂµÃ„Â½Ã¡Â¹Ã»
+	string colOutput = "???? ??????? ????";			// ÃÃ¤ÂºÃ…ÃŠÃ‡ÃŠÃºÃ—Ã…ÂµÃ„Â½Ã¡Â¹Ã»
+	string tmp;
+	strcpy(output, colOutput.c_str());
+	Mat srcImg = cv::imread(filePath);
 
 	if (!CheckFolderExist(tmpSaveDir)) {
 		CreateDirectory(tmpSaveDir.c_str(), NULL);
 	}
-
-	Rect deeplabBbox;			// deeplabµÄ½á¹û
-	vector<string> rowOutput;	// ÏäºÅÊÇºá×ÅµÄµÄ½á¹û
-	string colOutput;			// ÏäºÅÊÇÊú×ÅµÄ½á¹û
-	Mat srcImg = cv::imread(filePath);
-
+	//clearDir(tmpSaveDir);		// Ã‡Ã¥Â¿Ã•Ã’Ã”ÃÃ‚Â´Ã¦Â´Â¢Ã–ÃÂ¼Ã¤ÃŠÃ½Â¾ÃÂµÃ„ÃÃ„Â¼Ã¾Â¼Ã
 	vector<string> files;
 	getAllFiles(tmpSaveDir, files);
 	for (auto file : files) {
 		DeleteFile(file.c_str());
 	}
 
-
-	//clearDir(tmpSaveDir);		// Çå¿ÕÒÔÏÂ´æ´¢ÖĞ¼äÊı¾İµÄÎÄ¼ş¼Ğ
 	initSocket();
-	deeplab_request(filePath, deeplabBbox); //¸ù¾İdeeplab½á¹ûcropÔ­Ê¼Í¼Æ¬£¬ÏÈcropÊÇÎªÁË½µµÍÖ®ºóËã·¨µÄ¼ÆËãÁ¿
-											//ifs << deeplabBbox.x << ' ' << deeplabBbox.y << ' ' << deeplabBbox.height << ' ' << deeplabBbox.width << endl;
+	deeplab_request(filePath, deeplabBbox); //Â¸Ã¹Â¾ÃdeeplabÂ½Ã¡Â¹Ã»cropÃ”Â­ÃŠÂ¼ÃÂ¼Ã†Â¬Â£Â¬ÃÃˆcropÃŠÃ‡ÃÂªÃÃ‹Â½ÂµÂµÃÃ–Â®ÂºÃ³Ã‹Ã£Â·Â¨ÂµÃ„Â¼Ã†Ã‹Ã£ÃÂ¿
+
+
+
+	string deeplabImgPath = filePath.substr(0, filePath.length() - 4) + "_dl.jpg";
+	cv::imwrite(deeplabImgPath, srcImg(deeplabBbox));
+
+
 	MserFilter mf(srcImg, deeplabBbox);
 	mf.filter();
+
 	if (mode == 0)	// AUTO
 	{
-		if (mf.rowClusters.size() != 0)
-		{
-			return false;
+		if (mf.rowClusters.size() != 0){
+			vector<east_bndbox> east_boxes;
+			vector<Rect> mser_boxes;
+			vector<Rect> ctpn_boxes;
+			east_request(deeplabImgPath, east_boxes);
+			Mat deeplabimg = cv::imread(deeplabImgPath);
+			Mat deeplabgrayimg;
+			cv::cvtColor(deeplabimg, deeplabgrayimg, CV_BGR2GRAY);
+			mser_boxes = getMSER(deeplabgrayimg, mserThres, mserMinArea, mserMaxArea);
+
+			NumberDetector* detector = new NumberDetector(deeplabImgPath, ctpn_boxes, east_boxes, mser_boxes, deeplabBbox);
+
+			string output_str = detector->detectRowNumber_front(tmpSaveDir);
+			strcpy(output, output_str.c_str());
+			return true;
 		}
 		else if (mf.colClusters.size() != 0)
 		{
@@ -543,20 +557,42 @@ bool detectSide(char *output, const char *input, int mode)
 				Mat tmpImg(srcImg, mf.colResult[j]);
 				imwrite(tmpSaveDir + to_string(j) + ".jpg", tmpImg);
 			}
-			alex_request(tmpSaveDir, colOutput);
+			alex_request(tmpSaveDir, tmp);
 
-			if (colOutput.size() == 0)
+			if (tmp.size() == 0)
 				return false;
-			colOutput.insert(4, " ");
-			if (mf.colResult.size() > 1)
-			{
-				colOutput.insert(mf.colClusters[0].size() + 1, " ");
+			else {
+				int companyLen = 3;
+				for (; companyLen >= 0; companyLen--)
+				{
+					if (tmp[companyLen] < '0' || tmp[companyLen] > '9')
+						break;
+				}
+				for (int i = 0; i <= companyLen; i++)
+					colOutput[i] = tmp[i];
+
+				int contLen = 0;
+				if (mf.colClusters.size() == 1)
+					contLen = tmp.size() - companyLen - 1;
+				else
+					contLen = tmp.size() - companyLen - 1 - mf.colClusters[1].size();
+				for (int i = 0; i < contLen; i++)
+					colOutput[i + 5] = tmp[companyLen + 1 + i];
+
+				if (mf.colClusters.size() > 1)
+				{
+					for (int j = 0; j < 4 && j < mf.colClusters[1].size(); j++)
+						colOutput[j + 13] = tmp[contLen + companyLen + j + 1];
+				}
+
+				strcpy(output, colOutput.c_str());
+				return true;
 			}
-			strcpy(output, colOutput.c_str());
-			return true;
+
 		}
-		else
+		else {
 			return false;
+		}
 	}
 	if (mode == 1)	//FCOL_MODE
 	{
@@ -567,29 +603,66 @@ bool detectSide(char *output, const char *input, int mode)
 				Mat tmpImg(srcImg, mf.colResult[j]);
 				imwrite(tmpSaveDir + to_string(j) + ".jpg", tmpImg);
 			}
-			alex_request(tmpSaveDir, colOutput);
-			if (colOutput.size() == 0)
+			alex_request(tmpSaveDir, tmp);
+
+			if (tmp.size() == 0)
 				return false;
-			colOutput.insert(4, " ");
-			if (mf.colResult.size() > 1)
-			{
-				colOutput.insert(mf.colClusters[0].size() + 1, " ");
+			else {
+				int companyLen = 3;
+				for (; companyLen >= 0; companyLen--)
+				{
+					if (tmp[companyLen] < '0' || tmp[companyLen] > '9')
+						break;
+				}
+				for (int i = 0; i <= companyLen; i++)
+					colOutput[i] = tmp[i];
+
+				int contLen = 0;
+				if (mf.colClusters.size() == 1)
+					contLen = tmp.size() - companyLen - 1;
+				else
+					contLen = tmp.size() - companyLen - 1 - mf.colClusters[1].size();
+				for (int i = 0; i < contLen; i++)
+					colOutput[i + 5] = tmp[companyLen + 1 + i];
+
+				if (mf.colClusters.size() > 1)
+				{
+					for (int j = 0; j < 4 && j < mf.colClusters[1].size(); j++)
+						colOutput[j + 13] = tmp[contLen + companyLen + j + 1];
+				}
+
+				strcpy(output, colOutput.c_str());
+				return true;
 			}
-			strcpy(output, colOutput.c_str());
-			return true;
 		}
 		else
 			return false;
 	}
 	if (mode == 2)	// FROW_MODE
 	{
-		return false;
+		vector<east_bndbox> east_boxes;
+		vector<Rect> mser_boxes;
+		vector<Rect> ctpn_boxes;
+		east_request(deeplabImgPath, east_boxes);
+		Mat deeplabimg = cv::imread(deeplabImgPath);
+		Mat deeplabgrayimg;
+		cv::cvtColor(deeplabimg, deeplabgrayimg, CV_BGR2GRAY);
+		mser_boxes = getMSER(deeplabgrayimg, mserThres, mserMinArea, mserMaxArea);
+
+		NumberDetector* detector = new NumberDetector(deeplabImgPath, ctpn_boxes, east_boxes, mser_boxes, deeplabBbox);
+
+		string output_str = detector->detectRowNumber_front(tmpSaveDir);
+		strcpy(output, output_str.c_str());
+		return true;
 	}
+
 	return false;
 }
+
+
 bool detect(char* output, const char* input, int side) {
 	string imgpath(input);
-	//Ìí¼ÓÎÄ¼şÊÇ·ñ´æÔÚµÄÅĞ¶Ï´úÂë
+	//æ·»åŠ æ–‡ä»¶æ˜¯å¦å­˜åœ¨çš„åˆ¤æ–­ä»£ç 
 	//if(!fileExist(imgpath))
 	Mat org_img = cv::imread(imgpath);
 	
@@ -609,7 +682,7 @@ bool detect(char* output, const char* input, int side) {
 	initSocket();
 	deeplab_request(imgpath, deeplab_box);
 
-	//ÀûÓÃ»ùÓÚDeeplabµÄ½á¹ûÔÙ×ö´¦Àí
+	//åˆ©ç”¨åŸºäºDeeplabçš„ç»“æœå†åšå¤„ç†
 	Mat deeplab_img = org_img(deeplab_box);
 	cv::imwrite(deeplab_imgpath, deeplab_img);
 	Mat deeplab_grayimg;
@@ -618,7 +691,7 @@ bool detect(char* output, const char* input, int side) {
 	east_request(deeplab_imgpath, east_boxes);
 	mser_boxes= getMSER(deeplab_grayimg, mserThres, mserMinArea, mserMaxArea);
 
-	//Ìí¼ÓÂ·¾¶ÊÇ·ñ´æÔÚµÄÅĞ¶Ï£¬Èô²»´æÔÚÔò´´½¨Â·¾¶
+	//æ·»åŠ è·¯å¾„æ˜¯å¦å­˜åœ¨çš„åˆ¤æ–­ï¼Œè‹¥ä¸å­˜åœ¨åˆ™åˆ›å»ºè·¯å¾„
 	string chars_savepath = "D:/savedImgs/";
 	if (!CheckFolderExist(chars_savepath)) {
 		CreateDirectory(chars_savepath.c_str(), NULL);
@@ -803,7 +876,7 @@ char* output2 = new char[100];
 
 int main() {
 
-	string testPath1= "D:/col_img/";
+	string testPath1= "D:/testIMG/";
 	vector<string> files1;
 	getAllFiles(testPath1, files1);
 	/*string testPath2 = "D:/TESTimg/front";
@@ -811,7 +884,7 @@ int main() {
 	getAllFiles(testPath2, files2);*/
 
 	for (int i = 0;i < files1.size();i++) {
-	contDetect(output1, files1[i].c_str(), AUTO);
+	detectSide(output1, files1[i].c_str(), AUTO);
 		//detect(output1, output2, img1.c_str(), img2.c_str(), 0);
 
 	cout << output1 << endl;
